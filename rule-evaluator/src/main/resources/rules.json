@@ -1,0 +1,23 @@
+{
+    "rules": [
+      {
+        "name": "Error Detection",
+        "type": "ERROR",
+        "message": "Error detected in {component}: "
+      },
+      {
+        "name": "Warning Detection",
+        "type": "WARNING",
+        "message": "Potential issue in {component}: "
+      },
+      {
+        "name": "High Error Rate",
+        "message": "High error rate detected in {component} ({amount} in the last {timeWindow} minutes): "
+      },
+      {
+        "name": "High Log Activity",
+        "message": "Very high logging activity detected in {component}: {amount} in the last {time} minutes!"
+      }
+    ]
+  }
+  

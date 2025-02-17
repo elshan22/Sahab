@@ -19,7 +19,8 @@
         <spring-boot.version>3.4.2</spring-boot.version>
         <kafka.version>3.3.2</kafka.version>
         <mysql.version>8.0.33</mysql.version>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
+        <jackson.version>2.16.1</jackson.version>
     </properties>
 
     <dependencyManagement>
