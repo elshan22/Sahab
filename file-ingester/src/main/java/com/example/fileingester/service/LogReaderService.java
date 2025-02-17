@@ -24,33 +24,32 @@ public class LogReaderService {
 
     private final KafkaProducerService kafkaProducerService;
 
-    private static final long FIXED_RATE = 10000;
-
     private static final Pattern LOG_PATTERN = Pattern.compile(
-        "(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3}) \\[(.*?)\\] (\\w+) ([\\w\\.]+) – (.+)"
+        "(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3}) (\\[(.*?)\\] (\\w+) ([\\w\\.]+) – (.+))"
     );
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS");
 
-
     @Value("${log.directory}")
-    private static String LOG_DIR;
+    private String logDirectory;
 
-    @Scheduled(fixedRate = FIXED_RATE)
+    @Scheduled(fixedRateString = "${log.reader.fixedRate}")
     public void watchLogDirectory() {
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(LOG_DIR), "*.log")) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(logDirectory), "*.log")) {
             for (Path file : stream) {
-                processLogFile(file);
+                String componentName = extractComponentName(file.getFileName().toString());
+                processLogFile(file, componentName);
+                deleteLogFile(file);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void processLogFile(Path file) {
+    private void processLogFile(Path file, String componentName) {
         try {
             Files.lines(file).forEach(line -> {
-                LogEntry logEntry = parseLogLine(line);
+                LogEntry logEntry = parseLogLine(line, componentName);
                 kafkaProducerService.sendLog(logEntry);
             });
         } catch (IOException e) {
@@ -58,26 +57,31 @@ public class LogReaderService {
         }
     }
 
-    public static LogEntry parseLogLine(String line) {
+    private LogEntry parseLogLine(String line, String componentName) {
         Matcher matcher = LOG_PATTERN.matcher(line);
 
+        LocalDateTime timestamp = LocalDateTime.now();
+        String data = "";
         if (matcher.matches()) {
-            LocalDateTime timestamp = LocalDateTime.parse(matcher.group(1), formatter);
-            String threadName = matcher.group(2);
-            String logLevel = matcher.group(3);
-            String className = matcher.group(4);
-            String message = matcher.group(5);
-
-            return new LogEntry(
-                timestamp,
-                "MyComponent",
-                logLevel,
-                threadName,
-                className,
-                message
-            );
+            timestamp = LocalDateTime.parse(matcher.group(1), formatter);
+            data = matcher.group(2);
         }
 
-        return new LogEntry(LocalDateTime.now(), "Unknown", "INFO", "Unknown", "Unknown", line);
+        return new LogEntry(timestamp, componentName, data);
     }
+
+    private String extractComponentName(String filename) {
+        return filename.split("-")[0];
+    }
+
+    private void deleteLogFile(Path file) {
+        try {
+            Files.delete(file);
+            System.out.println("Deleted file: " + file.getFileName());
+        } catch (IOException e) {
+            System.err.println("Failed to delete file: " + file.getFileName());
+            e.printStackTrace();
+        }
+    }
+
 }

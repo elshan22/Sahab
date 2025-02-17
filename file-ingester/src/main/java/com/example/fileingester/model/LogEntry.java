@@ -12,8 +12,5 @@ import lombok.NoArgsConstructor;
 public class LogEntry {
     private LocalDateTime timestamp;
     private String componentName;
-    private String errorType;
-    private String threadName;
-    private String className;
-    private String message;
+    private String Data;
 }
