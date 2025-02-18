@@ -12,7 +12,6 @@
         <module>file-ingester</module>
         <module>rule-evaluator</module>
         <module>api-service</module>
-        <module>config</module>
     </modules>
 
     <properties>

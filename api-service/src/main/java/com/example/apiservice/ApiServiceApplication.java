@@ -1,13 +1,13 @@
-package com.example.config;
+package com.example.apiservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ConfigApplication {
+public class ApiServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ConfigApplication.class, args);
+		SpringApplication.run(ApiServiceApplication.class, args);
 	}
 
 }

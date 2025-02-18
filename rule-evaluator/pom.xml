@@ -42,10 +42,5 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>config</artifactId>
-            <version>1.0.0</version>
-        </dependency>
     </dependencies>
 </project>

@@ -28,14 +28,14 @@
             <version>${spring-boot.version}</version>
         </dependency>
         <dependency>
+				<groupId>org.projectlombok</groupId>
+				<artifactId>lombok</artifactId>
+				<optional>true</optional>
+		</dependency>
+        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>config</artifactId>
-            <version>1.0.0</version>
         </dependency>
     </dependencies>
 </project>
