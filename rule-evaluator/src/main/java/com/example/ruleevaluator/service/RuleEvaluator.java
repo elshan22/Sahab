@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+import java.util.regex.*;
+
 @Service
 public class RuleEvaluator {
 
@@ -28,6 +30,8 @@ public class RuleEvaluator {
     private final List<JsonNode> rules = new ArrayList<>();
     private final Map<String, Queue<LogEntry>> logHistory = new HashMap<>();
 
+    private static final Pattern LOG_PATTERN = Pattern.compile("\\[.*\\]\\s*(\\S+).*–\\s*(.*)");
+
     public RuleEvaluator() {
         loadRulesFromFile("rules.json");
     }
@@ -36,7 +40,7 @@ public class RuleEvaluator {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode root = objectMapper.readTree(new File(filePath));
-            rules.addAll(root.get("rules"));
+            rules.addAll((Collection<? extends JsonNode>) root.get("rules"));
         } catch (IOException e) {
             throw new RuntimeException("Failed to load rules from file", e);
         }
@@ -44,7 +48,7 @@ public class RuleEvaluator {
 
     public AlertData evaluate(LogEntry logEntry) {
         String componentName = logEntry.getComponentName();
-        String logMessage = logEntry.getData();
+        String[] logData = getLogTypeAndMessage(logEntry);
 
         logHistory.putIfAbsent(componentName, new LinkedList<>());
         Queue<LogEntry> logs = logHistory.get(componentName);
@@ -53,41 +57,51 @@ public class RuleEvaluator {
         cleanOldLogs(logs, now);
         logs.add(logEntry);
 
-        // Check for ERROR or WARNING logs
         for (JsonNode rule : rules) {
-            if (rule.has("type") && logMessage.contains(rule.get("type").asText())) {
+            if (rule.has("type") && logData[0].equals(rule.get("type").asText())) {
                 String alertMessage = rule.get("message").asText()
-                        .replace("{component}", componentName) + logMessage;
+                        .replace("{component}", componentName) + logData[1];
                 return new AlertData(rule.get("type").asText(), alertMessage);
             }
         }
 
-        // Check for high error rate
-        long errorCount = logs.stream()
-                .filter(log -> log.getData().contains("ERROR"))
-                .count();
+        List<LogEntry> errors = logs.stream()
+                .filter(log -> getLogTypeAndMessage(log)[0].equals("ERROR")).toList();
 
-        if (errorCount > errorThreshold) {
+        if (errors.size() > errorThreshold) {
             JsonNode errorRule = findRuleByName("High Error Rate");
             if (errorRule != null) {
                 String alertMessage = errorRule.get("message").asText()
                         .replace("{component}", componentName)
-                        .replace("{amount}", String.valueOf(errorCount))
+                        .replace("{amount}", String.valueOf(errors.size()))
                         .replace("{timeWindow}", String.valueOf(timeWindowMinutes))
-                        + getLastTwoLogs(logs);
+                        + getLastTwoLogs(errors);
                 return new AlertData("HIGH ERROR RATE", alertMessage);
             }
         }
 
-        // Check for high log activity
+        List<LogEntry> warnings = logs.stream()
+                .filter(log -> getLogTypeAndMessage(log)[0].equals("WARNING")).toList();
+
+        if (warnings.size() > errorThreshold) {
+            JsonNode errorRule = findRuleByName("High Warning Rate");
+            if (errorRule != null) {
+                String alertMessage = errorRule.get("message").asText()
+                        .replace("{component}", componentName)
+                        .replace("{amount}", String.valueOf(warnings.size()))
+                        .replace("{timeWindow}", String.valueOf(timeWindowMinutes))
+                        + getLastTwoLogs(warnings);
+                return new AlertData("HIGH WARNING RATE", alertMessage);
+            }
+        }
+
         if (logs.size() > highLogRateThreshold) {
             JsonNode logActivityRule = findRuleByName("High Log Activity");
             if (logActivityRule != null) {
                 String alertMessage = logActivityRule.get("message").asText()
                         .replace("{component}", componentName)
                         .replace("{amount}", String.valueOf(logs.size()))
-                        .replace("{time}", String.valueOf(timeWindowMinutes))
-                        + getLastTwoLogs(logs);
+                        .replace("{timeWindow}", String.valueOf(timeWindowMinutes));
                 return new AlertData("HIGH LOG ACTIVITY", alertMessage);
             }
         }
@@ -103,10 +117,23 @@ public class RuleEvaluator {
         return rules.stream().filter(rule -> rule.get("name").asText().equals(name)).findFirst().orElse(null);
     }
 
-    private String getLastTwoLogs(Queue<LogEntry> logs) {
-        return logs.stream().skip(Math.max(0, logs.size() - 2))
-                .map(LogEntry::getData)
-                .reduce("\nLast logs: ", (a, b) -> a + "\n" + b);
+    private String getLastTwoLogs(List<LogEntry> logs) {
+        return "\n" + getLogTypeAndMessage(logs.get(logs.size() - 2))[1]
+              +"\n" + getLogTypeAndMessage(logs.get(logs.size() - 1))[1];
+    }
+
+    private String[] getLogTypeAndMessage(LogEntry logEntry) {
+        String logMessage = logEntry.getData();
+        String logType = logEntry.getData();
+
+        Matcher matcher = LOG_PATTERN.matcher(logEntry.getData());
+
+        if (matcher.find()) {
+            logType = matcher.group(1);
+            logMessage = matcher.group(2);
+        }
+
+        return new String[]{logType, logMessage};
     }
 
     public static class AlertData {
