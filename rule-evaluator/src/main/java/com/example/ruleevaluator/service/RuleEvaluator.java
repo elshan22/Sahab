@@ -1,19 +1,26 @@
 package com.example.ruleevaluator.service;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Service;
+
 import com.example.ruleevaluator.model.LogEntry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-
-import java.util.regex.*;
 
 @Service
 public class RuleEvaluator {
@@ -33,16 +40,13 @@ public class RuleEvaluator {
     private static final Pattern LOG_PATTERN = Pattern.compile("\\[.*\\]\\s*(\\S+).*–\\s*(.*)");
 
     public RuleEvaluator() {
-        loadRulesFromFile("rules.json");
-    }
-
-    private void loadRulesFromFile(String filePath) {
         try {
+            ClassPathResource resource = new ClassPathResource("rules.json");
+            InputStream inputStream = resource.getInputStream();
             ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode root = objectMapper.readTree(new File(filePath));
-            rules.addAll((Collection<? extends JsonNode>) root.get("rules"));
+            rules.addAll((Collection<? extends JsonNode>) objectMapper.readTree(inputStream));
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load rules from file", e);
+            throw new RuntimeException("Failed to load rules.json", e);
         }
     }
 
