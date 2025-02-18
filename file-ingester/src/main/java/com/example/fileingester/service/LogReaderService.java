@@ -10,7 +10,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -30,12 +29,11 @@ public class LogReaderService {
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS");
 
-    @Value("${log.directory}")
-    private String logDirectory;
+    private static final String LOG_DIR = "logs";
 
-    @Scheduled(fixedRateString = "${log.reader.fixedRate}")
+    @Scheduled(fixedRate=10000)
     public void watchLogDirectory() {
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(logDirectory), "*.log")) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(LOG_DIR), "*.log")) {
             for (Path file : stream) {
                 String componentName = extractComponentName(file.getFileName().toString());
                 processLogFile(file, componentName);

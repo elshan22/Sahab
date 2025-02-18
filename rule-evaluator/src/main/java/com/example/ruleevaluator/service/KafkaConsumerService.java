@@ -1,12 +1,17 @@
 package com.example.ruleevaluator.service;
 
+import java.util.List;
+
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 
 import com.example.ruleevaluator.model.Alert;
 import com.example.ruleevaluator.model.LogEntry;
 import com.example.ruleevaluator.repository.AlertRepository;
+import com.example.ruleevaluator.service.RuleEvaluator.AlertData;
 
 import lombok.RequiredArgsConstructor;
 
@@ -15,23 +20,25 @@ import lombok.RequiredArgsConstructor;
 public class KafkaConsumerService {
 
     @Autowired
-    private final AlertRepository alertRepository;
+    private AlertRepository alertRepository;
     @Autowired
-    private final RuleEvaluator ruleEvaluator;
+    private RuleEvaluator ruleEvaluator;
 
-    @KafkaListener(topics = "logs-topic", groupId = "log-consumer-group", containerFactory = "kafkaListenerContainerFactory")
-    public void consumeLog(LogEntry logEntry) {
-        RuleEvaluator.AlertData alertData = ruleEvaluator.evaluate(logEntry);
+    @KafkaListener(topics = "logs-topic", groupId = "log-consumer-group", containerFactory = "concurrentKafkaListenerContainerFactory")
+    public void consumeLog(ConsumerRecord<String, LogEntry> consumerRecord, Acknowledgment acknowledgment) {
+        List<RuleEvaluator.AlertData> alerts = ruleEvaluator.evaluate(consumerRecord.value());
 
-        if (alertData != null) {
+        for (AlertData alertData: alerts) {
             Alert alert = new Alert(
-                null, 
-                logEntry.getTimestamp(), 
-                logEntry.getComponentName(), 
-                alertData.ruleTriggered, 
+                null,
+                consumerRecord.value().getTimestamp(),
+                consumerRecord.value().getComponentName(),
+                alertData.ruleTriggered,
                 alertData.alertMessage
             );
             alertRepository.save(alert);
         }
+
+        acknowledgment.acknowledge();
     }
 }

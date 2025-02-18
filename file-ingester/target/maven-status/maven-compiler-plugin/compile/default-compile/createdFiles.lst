@@ -1,1 +1,5 @@
-com/example/fileingester/FileingesterApplication.class
+com/example/fileingester/service/KafkaProducerService.class
+com/example/fileingester/config/KafkaConfig.class
+com/example/fileingester/model/LogEntry.class
+com/example/fileingester/service/LogReaderService.class
+com/example/fileingester/FileIngesterApplication.class

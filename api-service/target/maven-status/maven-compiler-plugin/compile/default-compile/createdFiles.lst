@@ -1,1 +1,5 @@
-com/example/apiservice/ApiserviceApplication.class
+com/example/apiservice/ApiServiceApplication.class
+com/example/apiservice/repository/AlertRepository.class
+com/example/apiservice/service/AlertService.class
+com/example/apiservice/model/Alert.class
+com/example/apiservice/controller/AlertController.class
